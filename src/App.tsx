@@ -1,0 +1,117 @@
+import { useState, useEffect } from 'react';
+import { Hero } from './components/Hero';
+import { CountryProfile } from './components/CountryProfile';
+import { LoadingAnimation } from './components/LoadingAnimation';
+import { generateCountryProfile } from './services/gemini';
+import { CountryData } from './types';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowUp, Globe2 } from 'lucide-react';
+
+export default function App() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [countryData, setCountryData] = useState<CountryData | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 500);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleSearch = async (country: string) => {
+    setIsLoading(true);
+    setError(null);
+    setCountryData(null);
+    
+    try {
+      const data = await generateCountryProfile(country);
+      if (!data.isValidCountry) {
+        setError("Destination not found. Please enter a valid country.");
+      } else {
+        setCountryData(data);
+        // Scroll down slightly to show results are loading/loaded
+        setTimeout(() => {
+          window.scrollTo({ top: window.innerHeight * 0.6, behavior: 'smooth' });
+        }, 100);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("An error occurred while fetching destination data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <Hero onSearch={handleSearch} isLoading={isLoading} />
+
+      <main className="relative min-h-[50vh]">
+        <AnimatePresence mode="wait">
+          {isLoading && (
+            <motion.div 
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-10 bg-slate-50/80 backdrop-blur-sm flex items-start justify-center pt-20"
+            >
+              <LoadingAnimation />
+            </motion.div>
+          )}
+
+          {error && !isLoading && (
+            <motion.div 
+              key="error"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-2xl mx-auto mt-20 p-6 bg-red-50 border border-red-100 rounded-2xl text-center"
+            >
+              <div className="text-4xl mb-4">🌍❓</div>
+              <h2 className="text-xl font-semibold text-red-800 mb-2">Oops!</h2>
+              <p className="text-red-600">{error}</p>
+            </motion.div>
+          )}
+
+          {countryData && !isLoading && (
+            <motion.div
+              key="profile"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <CountryProfile data={countryData} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* Scroll to top button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            onClick={scrollToTop}
+            className="fixed bottom-8 right-8 p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors z-50"
+            aria-label="Scroll to top"
+          >
+            <ArrowUp size={24} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      <footer className="bg-slate-900 text-slate-400 py-8 text-center border-t border-slate-800 mt-auto">
+        <p className="text-sm font-medium tracking-wide">Powered by GlobeGenius AI</p>
+      </footer>
+    </div>
+  );
+}
