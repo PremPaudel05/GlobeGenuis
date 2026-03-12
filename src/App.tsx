@@ -5,7 +5,9 @@ import { LoadingAnimation } from './components/LoadingAnimation';
 import { generateCountryProfile } from './services/gemini';
 import { CountryData } from './types';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowUp, Globe2 } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
+
+const SEARCH_TIMEOUT_MS = 8000;
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,29 +19,63 @@ export default function App() {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 500);
     };
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleSearch = async (country: string) => {
+    const trimmedCountry = country.trim();
+
+    if (!trimmedCountry) {
+      setError('Please enter a country name.');
+      setCountryData(null);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setCountryData(null);
-    
+
     try {
-      const data = await generateCountryProfile(country);
+      const timeoutPromise = new Promise<CountryData>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Request timed out'));
+        }, SEARCH_TIMEOUT_MS);
+      });
+
+      const data = await Promise.race([
+        generateCountryProfile(trimmedCountry),
+        timeoutPromise,
+      ]);
+
       if (!data.isValidCountry) {
-        setError("Destination not found. Please enter a valid country.");
+        setError('Destination not found. Please enter a valid country.');
       } else {
         setCountryData(data);
-        // Scroll down slightly to show results are loading/loaded
         setTimeout(() => {
           window.scrollTo({ top: window.innerHeight * 0.6, behavior: 'smooth' });
         }, 100);
       }
     } catch (err) {
       console.error(err);
-      setError("An error occurred while fetching destination data. Please try again.");
+
+      const message =
+        err instanceof Error ? err.message : 'Unknown error occurred';
+
+      if (message.toLowerCase().includes('api key')) {
+        setError(
+          'Live AI travel data is not available in this public demo yet. The website is deployed successfully, but Gemini-powered search needs a secure backend before it can work on GitHub Pages.'
+        );
+      } else if (message.toLowerCase().includes('timed out')) {
+        setError(
+          'The request took too long. Please try again in a moment.'
+        );
+      } else {
+        setError(
+          'We could not load travel insights right now. Please try again later.'
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +92,7 @@ export default function App() {
       <main className="relative min-h-[50vh]">
         <AnimatePresence mode="wait">
           {isLoading && (
-            <motion.div 
+            <motion.div
               key="loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -68,15 +104,17 @@ export default function App() {
           )}
 
           {error && !isLoading && (
-            <motion.div 
+            <motion.div
               key="error"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-2xl mx-auto mt-20 p-6 bg-red-50 border border-red-100 rounded-2xl text-center"
+              className="max-w-3xl mx-auto mt-20 p-6 bg-amber-50 border border-amber-200 rounded-2xl text-center shadow-sm"
             >
-              <div className="text-4xl mb-4">🌍❓</div>
-              <h2 className="text-xl font-semibold text-red-800 mb-2">Oops!</h2>
-              <p className="text-red-600">{error}</p>
+              <div className="text-4xl mb-4">🌍</div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-2">
+                Travel insights are temporarily unavailable
+              </h2>
+              <p className="text-slate-600 leading-7">{error}</p>
             </motion.div>
           )}
 
@@ -93,7 +131,6 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Scroll to top button */}
       <AnimatePresence>
         {showScrollTop && (
           <motion.button
