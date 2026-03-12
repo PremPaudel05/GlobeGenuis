@@ -1,9 +1,14 @@
 import { GoogleGenAI } from '@google/genai';
 import { CountryData } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const apiKey = process.env.GEMINI_API_KEY;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export async function generateCountryProfile(countryName: string): Promise<CountryData> {
+  if (!ai) {
+    throw new Error('Gemini API key is missing');
+  }
+
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash',
     contents: `Generate a comprehensive travel profile for the country: "${countryName}".
@@ -30,7 +35,7 @@ Return ONLY a valid JSON object matching this exact structure (no markdown forma
 
   let text = response.text || "";
   text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-  
+
   try {
     return JSON.parse(text) as CountryData;
   } catch (e) {
@@ -40,20 +45,29 @@ Return ONLY a valid JSON object matching this exact structure (no markdown forma
 }
 
 export async function generateAttractionImage(prompt: string): Promise<string> {
+  if (!ai) {
+    throw new Error('Gemini API key is missing');
+  }
+
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents: prompt,
   });
-  
+
   for (const part of response.candidates?.[0]?.content?.parts || []) {
     if (part.inlineData) {
       return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
     }
   }
+
   throw new Error("Failed to generate image");
 }
 
 export async function editAttractionImage(base64Data: string, mimeType: string, prompt: string): Promise<string> {
+  if (!ai) {
+    throw new Error('Gemini API key is missing');
+  }
+
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents: {
@@ -63,11 +77,12 @@ export async function editAttractionImage(base64Data: string, mimeType: string, 
       ]
     }
   });
-  
+
   for (const part of response.candidates?.[0]?.content?.parts || []) {
     if (part.inlineData) {
       return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
     }
   }
+
   throw new Error("Failed to edit image");
 }
