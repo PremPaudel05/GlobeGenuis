@@ -1,88 +1,36 @@
-import { GoogleGenAI } from '@google/genai';
 import { CountryData } from '../types';
-
-const apiKey = process.env.GEMINI_API_KEY;
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+// Remove the GoogleGenAI import – we'll use fetch instead
 
 export async function generateCountryProfile(countryName: string): Promise<CountryData> {
-  if (!ai) {
-    throw new Error('Gemini API key is missing');
-  }
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Generate a comprehensive travel profile for the country: "${countryName}".
-You MUST use the googleMaps tool to get accurate, up-to-date information about the country, its capital, and top attractions.
-Return ONLY a valid JSON object matching this exact structure (no markdown formatting, no backticks, just the raw JSON):
-{
-  "isValidCountry": boolean,
-  "overview": { "flagEmoji": "", "capital": "", "population": "", "currency": "", "currencyCode": "", "exchangeRateToUSD": 1.0, "timeZone": "" },
-  "geography": { "climate": "", "landscape": "", "majorCities": [""], "naturalLandmarks": [""] },
-  "culture": { "traditions": [""], "socialNorms": [""], "religionOverview": "", "etiquetteTips": [""] },
-  "foods": [ { "name": "", "description": "", "famousFor": "" } ],
-  "attractions": [ { "name": "", "city": "", "famousFor": "", "interestingFact": "", "imageSearchQuery": "" } ],
-  "phrases": [ { "english": "", "local": "", "phonetic": "" } ],
-  "prices": { "hotel": "", "meal": "", "streetFood": "", "coffee": "", "transport": "", "taxi": "" },
-  "bestTimeToVisit": { "bestMonths": "", "rainySeason": "", "cheapestSeason": "", "majorFestivals": [""] },
-  "funFacts": [""],
-  "mapData": { "countryQuery": "", "cities": [ { "name": "", "query": "", "highlights": [""] } ], "bestBeaches": [""], "bestFoodAreas": [""], "nightlifeZones": [""], "instagrammableSpots": [""], "areasToAvoid": [""] }
-}`,
-    config: {
-      tools: [{ googleMaps: {} }],
-      temperature: 0.2
-    },
-  });
-
-  let text = response.text || "";
-  text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-
   try {
-    return JSON.parse(text) as CountryData;
-  } catch (e) {
-    console.error("Failed to parse JSON:", text);
-    throw new Error("Failed to generate structured data");
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ country: countryName })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data as CountryData;
+  } catch (error) {
+    console.error("Failed to fetch from API, using demo data:", error);
+    // Dynamically import demo data as fallback
+    const { demoCountryData } = await import('../data/demoCountry');
+    return demoCountryData as CountryData;
   }
 }
 
+// Image functions – for now, return a placeholder or throw a friendly error
+// You can adjust these based on whether your app actually uses them
 export async function generateAttractionImage(prompt: string): Promise<string> {
-  if (!ai) {
-    throw new Error('Gemini API key is missing');
-  }
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: prompt,
-  });
-
-  for (const part of response.candidates?.[0]?.content?.parts || []) {
-    if (part.inlineData) {
-      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-    }
-  }
-
-  throw new Error("Failed to generate image");
+  console.warn("Image generation is not available in this version");
+  return "https://via.placeholder.com/400x300?text=Image+Unavailable";
 }
 
 export async function editAttractionImage(base64Data: string, mimeType: string, prompt: string): Promise<string> {
-  if (!ai) {
-    throw new Error('Gemini API key is missing');
-  }
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: {
-      parts: [
-        { inlineData: { data: base64Data, mimeType } },
-        { text: prompt }
-      ]
-    }
-  });
-
-  for (const part of response.candidates?.[0]?.content?.parts || []) {
-    if (part.inlineData) {
-      return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-    }
-  }
-
-  throw new Error("Failed to edit image");
+  console.warn("Image editing is not available in this version");
+  return "https://via.placeholder.com/400x300?text=Editing+Unavailable";
 }
