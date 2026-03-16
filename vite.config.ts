@@ -6,9 +6,9 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: '/', // Changed from '/GlobeGenuis/'
+    base: '/', // Changed from '/GlobeGenuis/' to root for Vercel
     plugins: [react(), tailwindcss()],
-    // Removed define block to avoid exposing API key in frontend
+    // Removed define block to prevent exposing API key in frontend
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
