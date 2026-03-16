@@ -1,5 +1,4 @@
 import { CountryData } from '../types';
-// Remove the GoogleGenAI import – we'll use fetch instead
 
 export async function generateCountryProfile(countryName: string): Promise<CountryData> {
   try {
@@ -23,8 +22,7 @@ export async function generateCountryProfile(countryName: string): Promise<Count
   }
 }
 
-// Image functions – for now, return a placeholder or throw a friendly error
-// You can adjust these based on whether your app actually uses them
+// Image functions – placeholders
 export async function generateAttractionImage(prompt: string): Promise<string> {
   console.warn("Image generation is not available in this version");
   return "https://via.placeholder.com/400x300?text=Image+Unavailable";
