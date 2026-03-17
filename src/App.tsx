@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Hero } from './components/Hero';
 import { CountryProfile } from './components/CountryProfile';
 import { LoadingAnimation } from './components/LoadingAnimation';
-import { generateCountryProfile } from './services/gemini';
+// import { generateCountryProfile } from './services/gemini';
 import { CountryData } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
@@ -44,10 +44,12 @@ export default function App() {
         }, SEARCH_TIMEOUT_MS);
       });
 
-      const data = await Promise.race([
-        generateCountryProfile(trimmedCountry),
-        timeoutPromise,
-      ]);
+      // const data = await generateCountryProfile(country);
+
+const data = {
+  name: country,
+  info: "Sample data"
+};
 
       if (!data.isValidCountry) {
         setError('Destination not found. Please enter a valid country.');
