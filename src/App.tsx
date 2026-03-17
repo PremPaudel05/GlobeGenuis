@@ -4,7 +4,7 @@ import { CountryProfile } from './components/CountryProfile';
 import { LoadingAnimation } from './components/LoadingAnimation';
 import { generateCountryProfile } from './services/gemini';
 import { CountryData } from './types';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
 
 const SEARCH_TIMEOUT_MS = 8000;
