@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { MapPin, Calendar, Sun, CloudRain, DollarSign, PartyPopper } from 'lucide-react';
 
 interface MapSectionProps {
