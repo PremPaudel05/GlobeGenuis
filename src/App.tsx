@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { Hero } from './components/Hero';
 import { CountryProfile } from './components/CountryProfile';
 import { LoadingAnimation } from './components/LoadingAnimation';
-// import { generateCountryProfile } from './services/gemini';
 import { CountryData } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
 
-const SEARCH_TIMEOUT_MS = 8000;
+const SEARCH_TIMEOUT_MS = 15000; // Increased to 15s to give Gemini time to think
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -38,20 +37,33 @@ export default function App() {
     setCountryData(null);
 
     try {
-      const timeoutPromise = new Promise<CountryData>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Request timed out'));
-        }, SEARCH_TIMEOUT_MS);
+      // Setup a modern timeout controller for the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS);
+
+      // Fetch from your new Vercel serverless function
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ destination: trimmedCountry }),
+        signal: controller.signal
       });
 
-      // const data = await generateCountryProfile(country);
+      clearTimeout(timeoutId);
 
-const data = {
-  name: country,
-  info: "Sample data"
-};
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
 
-      if (!data.isValidCountry) {
+      const result = await response.json();
+      
+      // If Gemini returns the JSON as a string, we parse it. Otherwise, use it directly.
+      const data = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+
+      // Validate the returned data
+      if (!data || data.isValidCountry === false) {
         setError('Destination not found. Please enter a valid country.');
       } else {
         setCountryData(data);
@@ -59,24 +71,15 @@ const data = {
           window.scrollTo({ top: window.innerHeight * 0.6, behavior: 'smooth' });
         }, 100);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Search error:", err);
 
-      const message =
-        err instanceof Error ? err.message : 'Unknown error occurred';
+      const message = err instanceof Error ? err.message : 'Unknown error occurred';
 
-      if (message.toLowerCase().includes('api key')) {
-        setError(
-          'Live AI travel data is not available in this public demo yet. The website is deployed successfully, but Gemini-powered search needs a secure backend before it can work on GitHub Pages.'
-        );
-      } else if (message.toLowerCase().includes('timed out')) {
-        setError(
-          'The request took too long. Please try again in a moment.'
-        );
+      if (err.name === 'AbortError' || message.toLowerCase().includes('timed out')) {
+        setError('The request took too long. Please try again in a moment.');
       } else {
-        setError(
-          'We could not load travel insights right now. Please try again later.'
-        );
+        setError('We could not load travel insights right now. Please try again later.');
       }
     } finally {
       setIsLoading(false);
