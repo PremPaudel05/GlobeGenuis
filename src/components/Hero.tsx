@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Compass, Globe2, Lightbulb } from 'lucide-react';
-import { motion } from "framer-motion";
-
+import { motion, AnimatePresence } from "framer-motion";
 interface HeroProps {
   onSearch: (country: string) => void;
   isLoading: boolean;
